@@ -24,7 +24,7 @@ const Headingcss = {
     backgroundSize: 'cover',
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'center center',
-    minHeight: '100vh',
+    minHeight: '120vh',
     width: '100%',
   };
 
@@ -39,7 +39,8 @@ export default function SuccessPage(){
                             <button className="flex items-center border-2 rounded-[7.2px] border-black sm:w-[305px] sm:h-[56px] p-[0.5em]  ">
                                 {/* <Image alt='' className="w-[7rem] sm:w-[12rem]" src={db}/> */}
                                 <h1 className="sm:text-[25.5px] font-semibold sm:w-[247.5px] sm:h-[37px] text-[#A50034] text-[16px]">Download Brochure</h1>
-                                <Image alt=''  src={dbimg} className="w-[1rem] sm:w-[2rem]"/>
+                                <Image alt="" src={dbimg} className="w-[1rem] sm:w-[2rem]" />
+                                {/* <Image alt=''  src={dbimg} className="w-[1rem] sm:w-[2rem]"/> */}
                             </button>
                         </a>
                 </div>
@@ -60,7 +61,7 @@ export default function SuccessPage(){
                 </div>
             </div>
             
-                <Image alt='' src={bg} className="m-0 w-full"/>
+                {/* <Image alt='' src={bg} className="m-0 w-full"/> */}
            
             <div className="sm:hidden  w-[100%] a z-[-1] ">
                 {/* <Image alt='' src={bg2} className="w-full"/> */}

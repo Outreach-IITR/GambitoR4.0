@@ -13,7 +13,7 @@ export default function UnderConstruction() {
     backgroundSize: 'cover',
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'center center',
-    minHeight: '100vh',
+    minHeight: '120vh',
     width: '100%',
   };
 

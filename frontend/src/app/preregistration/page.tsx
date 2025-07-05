@@ -240,7 +240,7 @@ export default function Page() {
     backgroundSize: "cover",
     backgroundRepeat: "no-repeat",
     backgroundPosition: "center",
-    minHeight: "100vh",
+    minHeight: "150vh",
     width: "100%",
   };
 
@@ -276,4 +276,3 @@ export default function Page() {
     </div>
   );
 }
-
