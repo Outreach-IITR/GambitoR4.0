@@ -1,305 +1,279 @@
 "use client";
-import Image from 'next/image';
-import React, { Suspense } from 'react';
-import  { useState,useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from "react";
+import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
+import { AxiosError } from "axios";
+import axios from "../https/api";
+
 import logo from "./_assets/Pre-Registration-page-logo.png";
-import Background from "./_assets/Background.png"
-import DownloadLogo from "./_assets/download-logo.svg";
-import dynamic from 'next/dynamic';
-import { CSSProperties } from 'react';
-import axios from '../https/api';
-import { useRouter , useSearchParams } from 'next/navigation';
-import { AxiosError } from 'axios';
-import ErrorBox from './errorBox';
-import ResponseBox from './responseBox';
-// import "./aa.css";
-import db from './_assets/DB.svg'
-import dbimg from './_assets/DownloadOutline.png';
+import Background from "./_assets/Background.png";
+import dbimg from "./_assets/DownloadOutline.png";
 
-
+import ErrorBox from "./errorBox";
+import ResponseBox from "./responseBox";
 
 const PDF_FILE_URL = "/Brochure.pdf";
 
-
-const PreRegistrationPage = () => {
-  const router = useRouter()
-  const searchParams = useSearchParams();
-  const flag = searchParams.get('isVerified');  
-  const [formData, setFormData] = useState({
-    name: '  ',
-    category: '  ',
-    schoolName: '  ',
-    contactNumber: '  ',
-    email: '  '
-  });
+const PreRegistrationForm: React.FC = () => {
+  const router = useRouter();
+  const params = useSearchParams();
+  const flag = params.get("isVerified");
 
   const [isVerified, setIsVerified] = useState(false);
-  //const [loading, setLoading] = useState(false);
-  const [response, setResponse] = useState('');
-
-  useEffect(() => {
-    if (flag === 'true') {
-      setIsVerified(true);
-    } else {
-      setIsVerified(false);
-    }
-  }, [flag]);
-  useEffect(() => {
-    const name = searchParams.get('name') || '';
-    const category = searchParams.get('category') || '';
-    const schoolName = searchParams.get('schoolName') || '';
-    const contactNumber = searchParams.get('contactNumber') || '';
-    const email = searchParams.get('email') || '';
-
-    setFormData({
-      name,
-      category ,
-      schoolName,
-      contactNumber,
-      email
-    });
-  }, [searchParams]);
-
-
-  const [errors, setErrors] = useState({
-    name: '',
-    category: '',
-    schoolName: '',
-    contactNumber: '',
-    email: '',
-    text:''
+  const [responseMsg, setResponseMsg] = useState("");
+  const [formData, setFormData] = useState({
+    name: "",
+    category: "",
+    schoolName: "",
+    contactNumber: "",
+    email: "",
   });
-  const handleInputChange = (event:React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = event.target;
-    setFormData({ ...formData, [id]: value });
+  const [errors, setErrors] = useState({
+    name: "",
+    category: "",
+    schoolName: "",
+    contactNumber: "",
+    email: "",
+    text: "",
+  });
+
+  // Sync verified flag
+  useEffect(() => {
+    setIsVerified(flag === "true");
+  }, [flag]);
+
+  // Pre-fill from query params
+  useEffect(() => {
+    setFormData({
+      name: params.get("name") || "",
+      category: params.get("category") || "",
+      schoolName: params.get("schoolName") || "",
+      contactNumber: params.get("contactNumber") || "",
+      email: params.get("email") || "",
+    });
+  }, [params]);
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    setFormData((f) => ({ ...f, [e.target.id]: e.target.value }));
   };
 
-  const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const { id , value } = event.target;
-    setFormData((prevData) => ({ ...prevData, [id]: value }));
+  const handleClickVerify = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!formData.email) {
+      return setErrors((err) => ({
+        ...err,
+        email: "Email address cannot be empty",
+      }));
+    }
+    if (!isVerified) {
+      try {
+        await axios.post("/sendOtp", { email: formData.email });
+        router.push(
+          `/mailverification?email=${formData.email}&category=${formData.category}&name=${formData.name}&schoolName=${formData.schoolName}&contactNumber=${formData.contactNumber}`
+        );
+      } catch {
+        // ignore errors
+      }
+    } else {
+      setResponseMsg("Email already verified");
+    }
   };
 
-  // const handleDownload = () => {
-  //   const fileName = PDF_FILE_URL.split("/").pop() ?? '';
-  //   const a = document.createElement('a');
-  //   a.href = PDF_FILE_URL;
-  //   a.setAttribute('download', fileName);
-  //   a.style.display = 'none';
-  //   document.body.appendChild(a);
-  //   a.click();
-  //   document.body.removeChild(a);
-  // };
-
-  const handleSubmit =  async (event:any) => {
-    setResponse('');
-    event.preventDefault();
-    console.log(formData); // Example: Logging form data
-    if(isVerified){
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResponseMsg("");
+    if (!isVerified) {
+      return setErrors((err) => ({
+        ...err,
+        text: "Registration Failed! Verify your email first.",
+      }));
+    }
     try {
-      const response = await axios.post('/auth/register', { formData });
-      console.log(response.data);
-      console.log('success')
-      router.push('/success'); // Redirect to a success page
-    } catch (error) {
-      if (error instanceof Error && 'response' in error && error.response) {
-        const axiosError = error as AxiosError<{ errors?: { [key: string]: string }, error?: string }>;
-        const errorMessage = axiosError.response?.data?.errors ?? 'Unknown error';
-        console.log(errorMessage)
-  
-        // Set errors state based on errorMessage
-        if(errorMessage!='Unknown error'){
-        setErrors(() => ({
-          name: errorMessage?.name ?? '',
-          category: errorMessage?.category ?? '',
-          schoolName: errorMessage?.schoolName ?? '',
-          contactNumber: errorMessage?.contactNumber ?? '',
-          email: errorMessage?.email ?? '',
-          text:''
-        }));}
-        else
-        {
-          setErrors(() => ({
-            name:'',
-            category:'',
-            schoolName:'',
-            contactNumber: '',
-            email:'',
-            text:''
-          }));
-        }
-        if (formData.name.trim() === '') {
-          setErrors((prevErrors) => ({ ...prevErrors, name: 'Name is required' }));
-        }
-    
-        if (formData.schoolName.trim() === '') {
-          setErrors((prevErrors) => ({ ...prevErrors, schoolName: 'Name of school is required' }));
-        }
-        setErrors((prevErrors) => ({ ...prevErrors, text: axiosError.response?.data?.error ?? '' }));
-        
-      } else {
-        console.error('An error occurred:', error instanceof Error ? error.message : 'Unknown error');
+      await axios.post("/auth/register", { formData });
+      router.push("/success");
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        (err as any).response &&
+        (err as any).response.data
+      ) {
+        const axiosErr = err as AxiosError<{
+          errors?: Record<string, string>;
+          error?: string;
+        }>;
+        const errs = axiosErr.response!.data.errors || {};
+        setErrors({
+          name: errs.name || "",
+          category: errs.category || "",
+          schoolName: errs.schoolName || "",
+          contactNumber: errs.contactNumber || "",
+          email: errs.email || "",
+          text: axiosErr.response!.data.error || "",
+        });
       }
     }
-  }
-  else
-  {
-    setErrors((prevErrors) => ({ ...prevErrors, text: 'Registration Failed ! Verify your email first' }));
-  }
-
   };
-
-  const handleClick = async (event:any) => {
-    event.preventDefault();
-    //router.push('/otpPage'); // Redirect to a page where you need to enter OTP.
-    if(formData.email === '')  setErrors((prevErrors) => ({ ...prevErrors, email: 'Email address cannot be empty' }));
-    else if(!isVerified){
-     //setLoading(true);
-    try{
-      const response = await axios.post('/sendOtp',{email : formData.email})
-      console.log(response.data);
-      //setResponse(response.data?.data);
-      router.push(`/mailverification?email=${formData.email}&&category=${formData.category}&&name=${formData.name}&&schoolName=${formData.schoolName}&&contactNumber=${formData.contactNumber}`);
-    }catch(err)
-    {
-      console.log(err);
-    }
-    //  finally{
-    //   setLoading(false);
-    // }
-  }
-  else 
-    {
-      //setResponse that email already verified
-      setResponse('Email already verified');
-    }
-  };
-
-  const backgroundImageStyle = {
-    backgroundImage: `url(${Background})`,
-    backgroundSize: 'cover',
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'center center',
-    minHeight: '100vh',
-    width: '100%',
-  };
-
-
-  const formStyleDiv:CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    
-    
-  };
-  
-  const Headingcss = {   
-    textShadow: '4px 4px 2px rgba(0, 0, 0, 0.10)' 
-  };
-
-  
 
   return (
-    // <div style={backgroundImageStyle} className="relative text-black">
-      <div className=' p-0 m-0 text-[#AF0034] h-screen  w-full flex flex-col items-center'>
-        <nav className="flex justify-between  px-[5vw] w-full mt-[2vw] ">
-                  <Image alt='' src={logo} className="sm:w-[307px] w-[138px]"/>
-                  <div className="flex items-center">
-                          <a href="/Brochure.pdf" download>
-                              <button className="flex items-center border-2 rounded-[7.2px] border-black sm:w-[305px] sm:h-[56px] p-[0.5em]  ">
-                                  {/* <Image alt='' className="w-[7rem] sm:w-[12rem]" src={db}/> */}
-                                  <h1 className="sm:text-[25.5px] font-semibold sm:w-[247.5px] sm:h-[37px] text-[#AF0034]">Download Brochure</h1>
-                                  <Image alt=''  src={dbimg} className="w-[1rem] sm:w-[2rem]"/>
-                              </button>
-                          </a>
-                  </div>
-              </nav>
-        <form onSubmit={handleSubmit} className='mt-6 flex flex-col justify-between items-center w-full'>
-        <h1 style={Headingcss} className="mt-2 mb-[4rem] w-[25rem] h-[4rem] font-jost text-[2rem] font-extrabold leading-[7rem] tracking-[0.03em] text-center lg:w-[60rem] lg:h-[6rem] lg:text-[4.7rem] lg:my-28" >PRE-REGISTRATION</h1>
-          <div style={formStyleDiv} className='w-[24rem] lg:w-[62rem]'>
-            <label htmlFor="name" className="mb-1 h-[37.84px] font-jost text-1rem font-semibold  leading-[3.5rem] tracking-[-0.04em] text-left lg:h-[37.84px] lg:mb-3 lg:text-[32px]">NAME</label>
-            <ErrorBox message={errors.name} />
-            <input type="text" id='name' required className='pl-3 mb-0 w-[100%] h-[2rem] border-2 border-[#AF0034] rounded-[0.5rem] lg:text-2xl font-normal  lg:h-[3.8rem] lg:rounded-[1rem] lg:mb-4 '  value={formData.name} onChange={handleInputChange} />
-          </div>
-          <div style={formStyleDiv} className='w-[24rem] lg:w-[62rem]'>
-              <label htmlFor="category" className="mb-1 h-[37.84px] font-jost text-1rem font-semibold leading-[3.5rem] tracking-[-0.04em] text-left lg:h-[37.84px] lg:mb-3 lg:text-[32px]">
-                  CATEGORY
-              </label>
-              <ErrorBox message={errors.category} />
-              <select 
-              id="category" 
-              required
-              className="pl-3 mb-0  h-[2rem] border-2 border-[#AF0034] rounded-[0.5rem] lg:text-2xl font-normal  lg:h-[3.8rem] lg:rounded-[1rem] lg:mb-4"
-              value={formData.category}
-              onChange={handleSelectChange}
-              >
-              <option value="None">Choose a category</option>
-              <option value="ARETEOX" >ARETEOX</option>
-              <option value="METIOX" >METIOX</option>
-              <option value="APOLLOX">APOLLOX</option>
-              <option value="ATHENOX">ATHENOX</option>
-              </select>
-          </div>
-          <div style={formStyleDiv} className='w-[24rem] lg:w-[62rem]'>
-            <label htmlFor="schoolName" className="mb-1 h-[37.84px] font-jost text-1rem font-semibold leading-[3.5rem] tracking-[-0.04em] text-left lg:h-[37.84px] lg:mb-3 lg:text-[32px]">SCHOOL NAME</label>
-            <ErrorBox message={errors.schoolName} />
-            <input type="text" id='schoolName' required className='pl-3 mb-0 h-[2rem] border-2 border-[#AF0034] rounded-[0.5rem] lg:text-2xl font-normal  lg:h-[3.8rem] lg:rounded-[1rem] lg:mb-4'  value={formData.schoolName} onChange={handleInputChange} />
-          </div>
-          <div style={formStyleDiv} className='w-[24rem] lg:w-[62rem]'>
-            <label htmlFor="contactNumber" className="mb-1 h-[37.84px] font-jost text-1rem font-semibold leading-[3.5rem] tracking-[-0.04em] text-left lg:h-[37.84px] lg:mb-3 lg:text-[32px]">CONTACT NUMBER</label>
-            <ErrorBox message={errors.contactNumber} />
-            {/* <div className="text-red-500 lg:text-xl mb-2 ">
-            Please enter your correct mobile number. <strong>This cannot be modified later.</strong>
-            </div> */}
-            <input type="text" id='contactNumber' placeholder='Enter your correct mobile number.This cannot be modified later.' required className='pl-3 mb-0 w-full h-[2rem] border-2 border-[#AF0034] rounded-[0.5rem] lg:text-2xl font-normal lg:h-[3.8rem] lg:rounded-[1rem] lg:mb-4 placeholder-[#AF0034] lg:placeholder:text-xl sm:placeholder:text-sm placeholder-xs'  value={formData.contactNumber} onChange={handleInputChange} />
-          </div>
-          <div style={formStyleDiv} className='w-[24rem] lg:w-[62rem]'>
-            <label htmlFor="email" className="mb-1 h-[37.84px] font-jost text-1rem font-semibold leading-[3.5rem] tracking-[-0.04em] text-left lg:h-[37.84px] lg:mb-3 lg:text-[32px]">EMAIL ADDRESS</label>
-            <ErrorBox message={errors.email} />
-            <input type='email' id='email' required disabled={isVerified} className='pl-3 mb-0  h-[2rem] border-2 border-[#AF0034] rounded-[0.5rem] lg:text-2xl font-normal  lg:h-[3.8rem] lg:rounded-[1rem] lg:mb-2'  value={formData.email} onChange={handleInputChange} />
-            
-            {!isVerified && <button className="cursor-pointer mt-1 w-24 h-10 border-0.5 border-[#AF0034] shadow-[0_0_10px_#BC6E26] rounded-lg text-[#AF0034] font-jost font-[600] text-base leading-10 tracking-[-0.04em] text-center lg:w-[250px] lg:h-14 lg:border-0.5 lg:rounded-xl lg:text-2xl hover:bg-[#ec581e]" onClick={handleClick}> VERIFY</button>}
-            {isVerified &&  <button className="cursor-pointer mt-1 bg-[#39b79c] w-24 h-10 border-0.5 border-[#36afa5] rounded-lg shadow-[0_0_10px_#BC6E26] text-[#AF0034] font-jost font-[600] text-base leading-10 tracking-[-0.04em] text-center lg:w-[250px] lg:h-14 lg:border-0.5 lg:rounded-xl lg:text-2xl">VERIFIED</button>}
-          </div>
-          <ErrorBox message={errors.text} /> 
-          <ResponseBox message={response} />  
-          <button type="submit" className="cursor-pointer mt-12 w-60 h-10 border-2 border-[#BC6E26] shadow-[0_0_10px_#BC6E26] rounded-lg text-[#AF0034] font-jost font-[600] text-xl leading-10 tracking-[-0.04em] text-center
-                  lg:w-[300px] lg:h-14 lg:border-0.5 lg:rounded-xl lg:text-2xl lg:mt-28 hover:bg-[#e94a1e]">PRE REGISTER NOW</button>
-        </form>
+    <form
+      onSubmit={handleSubmit}
+      className="w-full max-w-3xl mx-auto flex flex-col space-y-6 py-8"
+    >
+      <h1 className="text-[#AF0034] text-4xl font-extrabold text-center">
+        PRE-REGISTRATION
+      </h1>
+
+      {/* NAME */}
+      <div>
+        <label htmlFor="name" className="block font-semibold mb-1">
+          NAME
+        </label>
+        <ErrorBox message={errors.name} />
+        <input
+          id="name"
+          type="text"
+          value={formData.name}
+          onChange={handleInputChange}
+          className="w-full border-2 border-[#AF0034] rounded-lg px-4 py-2"
+        />
       </div>
-    // </div>
+
+      {/* CATEGORY */}
+      <div>
+        <label htmlFor="category" className="block font-semibold mb-1">
+          CATEGORY
+        </label>
+        <ErrorBox message={errors.category} />
+        <select
+          id="category"
+          value={formData.category}
+          onChange={handleInputChange}
+          className="w-full border-2 border-[#AF0034] rounded-lg px-4 py-2"
+        >
+          <option value="">Choose a category</option>
+          <option value="ARETEOX">ARETEOX</option>
+          <option value="METIOX">METIOX</option>
+          <option value="APOLLOX">APOLLOX</option>
+          <option value="ATHENOX">ATHENOX</option>
+        </select>
+      </div>
+
+      {/* SCHOOL NAME */}
+      <div>
+        <label htmlFor="schoolName" className="block font-semibold mb-1">
+          SCHOOL NAME
+        </label>
+        <ErrorBox message={errors.schoolName} />
+        <input
+          id="schoolName"
+          type="text"
+          value={formData.schoolName}
+          onChange={handleInputChange}
+          className="w-full border-2 border-[#AF0034] rounded-lg px-4 py-2"
+        />
+      </div>
+
+      {/* CONTACT NUMBER */}
+      <div>
+        <label htmlFor="contactNumber" className="block font-semibold mb-1">
+          CONTACT NUMBER
+        </label>
+        <ErrorBox message={errors.contactNumber} />
+        <input
+          id="contactNumber"
+          type="text"
+          placeholder="Enter your correct mobile number. This cannot be modified later."
+          value={formData.contactNumber}
+          onChange={handleInputChange}
+          className="w-full border-2 border-[#AF0034] rounded-lg px-4 py-2 placeholder-[#AF0034]"
+        />
+      </div>
+
+      {/* EMAIL & VERIFY */}
+      <div>
+        <label htmlFor="email" className="block font-semibold mb-1">
+          EMAIL ADDRESS
+        </label>
+        <ErrorBox message={errors.email} />
+        <div className="flex items-center space-x-4">
+          <input
+            id="email"
+            type="email"
+            disabled={isVerified}
+            value={formData.email}
+            onChange={handleInputChange}
+            className="flex-1 border-2 border-[#AF0034] rounded-lg px-4 py-2"
+          />
+          {!isVerified ? (
+            <button
+              onClick={handleClickVerify}
+              className="px-4 py-2 border border-[#AF0034] rounded-lg text-[#AF0034] font-semibold hover:bg-[#ec581e]"
+            >
+              VERIFY
+            </button>
+          ) : (
+            <span className="px-4 py-2 bg-[#39b79c] rounded-lg text-white font-semibold">
+              VERIFIED
+            </span>
+          )}
+        </div>
+      </div>
+
+      <ErrorBox message={errors.text} />
+      <ResponseBox message={responseMsg} />
+
+      <button
+        type="submit"
+        className="mt-4 w-full bg-[#BC6E26] text-white font-semibold py-3 rounded-lg hover:bg-[#e94a1e]"
+      >
+        PRE-REGISTER NOW
+      </button>
+    </form>
   );
 };
 
-const Preregistration = dynamic(() => Promise.resolve(PreRegistrationPage), { ssr: false });
-
 export default function Page() {
+  const bgStyle: React.CSSProperties = {
+    backgroundImage: `url(${Background.src})`,
+    backgroundSize: "cover",
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "center",
+    minHeight: "100vh",
+    width: "100%",
+  };
+
   return (
-    <div className="relative w-full min-h-screen overflow-auto">
-      {/* Background */}
-      <Image
-        src={Background}
-        alt="Background"
-        layout="fill"
-        objectFit="cover"
-        quality={100}
-        className="-z-10"
-      />
+    <div style={bgStyle} className="relative text-black overflow-auto">
+      {/* Navbar */}
+      <nav className="flex justify-between items-center py-8 mx-4 sm:mx-16">
+        <Image
+          src={logo}
+          alt="Gambitor Logo"
+          className="w-[138px] sm:w-[307px]"
+        />
+        <a href={PDF_FILE_URL} download>
+          <button className="flex items-center border-2 border-black rounded-md p-2 sm:p-4">
+            <span className="text-[#AF0034] font-semibold text-[18px] sm:text-[25.5px] mr-2">
+              Download Brochure
+            </span>
+            <Image
+              src={dbimg}
+              alt="Download Icon"
+              className="w-[1rem] sm:w-[2rem]"
+            />
+          </button>
+        </a>
+      </nav>
 
-      {/* Overlay */}
-      <div className="relative z-10 flex flex-col items-center py-8 space-y-8">
-        <nav className="w-full max-w-4xl flex justify-between items-center px-4">
-          <Image src={logo} alt="Logo" className="h-12 sm:h-16" />
-          <a href={PDF_FILE_URL} download>
-            <button className="flex items-center border border-black rounded-md px-4 py-2">
-              <span className="text-[#AF0034] font-semibold">Download Brochure</span>
-              <Image src={dbimg} alt="Download Icon" className="h-6 w-6 ml-2" />
-            </button>
-          </a>
-        </nav>
-
-        <Suspense fallback={<div>Loading...</div>}>
-          <PreRegistrationPage />
+      {/* Pre‑Registration Form below */}
+      <div className="relative z-10 px-4 sm:px-8 py-12">
+        <Suspense fallback={<div>Loading…</div>}>
+          <PreRegistrationForm />
         </Suspense>
       </div>
     </div>
   );
 }
+
